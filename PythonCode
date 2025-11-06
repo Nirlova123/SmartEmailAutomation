@@ -1,0 +1,47 @@
+import os
+import glob
+import smtplib
+from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
+
+
+# Folder path
+
+folder_path = "E:\GOVT_EXAM\ADMIT_CARD"
+
+# Get latest files
+
+files = glob.glob(os.path.join(folder_path, "*"))
+latest_files = sorted(files, key=os.path.getmtime, reverse=True)
+
+# Email setup
+
+EMAIL_SENDER = os.getenv("EMAIL_SENDER")
+EMAIL_PASS = os.getenv("EMAIL_PASS")  # <-- Use your App Password
+
+msg = MIMEMultipart()
+msg['From'] = EMAIL_SENDER
+msg['To'] =os.getenv("EMAIL_RECEIVER")
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+msg['Subject'] = f"Files from {timestamp}"
+
+        
+for file_path in latest_files:
+    try:
+        with open(file_path, "rb") as attachment:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f"attachment; filename={os.path.basename(file_path)}")
+        msg.attach(part)
+    except Exception as e:
+        pass
+
+# Send email
+with smtplib.SMTP('smtp.gmail.com', 587) as server:
+    server.starttls()
+    server.login(EMAIL_SENDER, EMAIL_PASS)
+    server.send_message(msg)
